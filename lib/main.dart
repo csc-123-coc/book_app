@@ -460,7 +460,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             const SizedBox(height: 10),
                             if (book.isRented)
                               Text(
-                                'Available on: ${book.availableDate ?? 'N/A'}',
+                                'Due on: ${book.availableDate ?? 'N/A'}',
                                 style: const TextStyle(color: Colors.red),
                               ),
                             Row(
@@ -525,7 +525,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text('Renter Name: ${borrowedBook['renterName']}'),
                       Text('Contact Info: ${borrowedBook['contact']}'),
                       Text('Rented on: ${borrowedBook['rentedDate']}'),
-                      Text('Return Date: ${borrowedBook['returnDate']}'),
+                      Text('Due Date: ${borrowedBook['returnDate']}'),
                       Text(
                         'Payment: ₱${borrowedBook['payment']}',
                         style: const TextStyle(color: Colors.green),
@@ -582,7 +582,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 TextField(
                   controller: returnDateController,
-                  decoration: const InputDecoration(labelText: 'Return Date'),
+                  decoration: const InputDecoration(labelText: 'Due Date'),
                   onTap: () async {
                     FocusScope.of(context).requestFocus(FocusNode());
                     DateTime? pickedDate = await showDatePicker(
@@ -653,7 +653,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   'dueDate': DateTime.now().add(const Duration(days: 7)),
                 });
 
+                // Add to rent history immediately
+                rentHistory.add({
+                  'title': book.title,
+                  'renterName': selectedRenter!.fullName,
+                  'contact': selectedRenter!.contact,
+                  'rentedDate': DateFormat('yMMMMd').format(rentedDate),
+                  'returnDate': returnDate,
+                  'payment': book.price.toString(),
+                  'imageUrl': book.imageUrl,
+                  'isReturned': false,
+                  'dueDate': DateTime.now().add(const Duration(days: 7)),
+                });
+
                 _saveBorrowedBooks();
+                _saveRentHistory(); // Save rent history
                 book.isRented = true;
                 book.availableDate = returnDate;
 
@@ -704,10 +718,14 @@ class _HomeScreenState extends State<HomeScreen> {
         book.isRented = false;
         book.availableDate = null;
 
-        // Move the transaction to rent history
-        rentHistory.add(borrowedBook);
-        _saveRentHistory(); // Save rent history
-        // Do not remove from borrowedBooks, just update the status
+        // Update the rent history entry to mark it as returned
+        for (var history in rentHistory) {
+          if (history['title'] == book.title &&
+              history['renterName'] == borrowedBook['renterName']) {
+            history['isReturned'] = true;
+            break;
+          }
+        }
 
         DateTime now = DateTime.now();
         DateTime dueDate = borrowedBook['dueDate'];
@@ -723,6 +741,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         );
+        _saveRentHistory(); // Save updated rent history
         setState(() {});
         return;
       }
@@ -772,7 +791,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text('Renter: ${overdueBook['renterName']}'),
                       Text('Contact Info: ${overdueBook['contact']}'),
                       Text('Rented on: ${overdueBook['rentedDate']}'),
-                      Text('Return Date: ${overdueBook['returnDate']}'),
+                      Text('Due Date: ${overdueBook['returnDate']}'),
                       const Text(
                         'Late Fee: ₱10 per day',
                         style: TextStyle(color: Colors.red),
@@ -888,7 +907,7 @@ class RenterBooksScreen extends StatelessWidget {
                           ),
                         ),
                         Text('Rented on: ${book['rentedDate']}'),
-                        Text('Return Date: ${book['returnDate']}'),
+                        Text('Due Date: ${book['returnDate']}'),
                         Text('Payment: ₱${book['payment']}'),
                         Text(
                           book['isReturned']
@@ -925,12 +944,27 @@ class RentHistoryScreen extends StatelessWidget {
             .map((item) => Map<String, dynamic>.from(item))
             .toList();
 
+    // Remove duplicates from rent history
+    final uniqueRentHistory = <Map<String, dynamic>>[];
+
+    // Use a set to track seen combinations of title and renterName
+    final seen = <String>{};
+
+    for (var entry in rentHistory) {
+      // Create a unique key based on title and renterName
+      String key = entry['title'] + entry['renterName'];
+      if (!seen.contains(key)) {
+        seen.add(key);
+        uniqueRentHistory.add(entry);
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Rent History')),
       body: ListView.builder(
-        itemCount: rentHistory.length,
+        itemCount: uniqueRentHistory.length,
         itemBuilder: (context, index) {
-          final book = rentHistory[index];
+          final book = uniqueRentHistory[index]; // Access the entry directly
           return GestureDetector(
             onTap: () {
               Navigator.push(
@@ -1013,7 +1047,7 @@ class RentersForBookScreen extends StatelessWidget {
                   ),
                   Text('Contact Info: ${renter['contact']}'),
                   Text('Rented on: ${renter['rentedDate']}'),
-                  Text('Return Date: ${renter['returnDate']}'),
+                  Text('Due Date: ${renter['returnDate']}'),
                   Text('Payment: ₱${renter['payment']}'),
                   Text(
                     renter['isReturned']
