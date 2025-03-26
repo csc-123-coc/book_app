@@ -845,10 +845,10 @@ class RenterBooksScreen extends StatelessWidget {
   final List<Map<String, dynamic>> borrowedBooks;
 
   const RenterBooksScreen({
-    Key? key,
+    super.key,
     required this.renter,
     required this.borrowedBooks,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -915,8 +915,7 @@ class RenterBooksScreen extends StatelessWidget {
 class RentHistoryScreen extends StatelessWidget {
   final List<Map<String, dynamic>> borrowedBooks;
 
-  const RentHistoryScreen({Key? key, required this.borrowedBooks})
-    : super(key: key);
+  const RentHistoryScreen({super.key, required this.borrowedBooks});
 
   @override
   Widget build(BuildContext context) {
@@ -982,10 +981,10 @@ class RentersForBookScreen extends StatelessWidget {
   final List<Map<String, dynamic>> borrowedBooks;
 
   const RentersForBookScreen({
-    Key? key,
+    super.key,
     required this.bookTitle,
     required this.borrowedBooks,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
